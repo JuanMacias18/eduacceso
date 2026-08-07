@@ -1,0 +1,14 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+supabase/.temp/
+
+# Tipos generados por el CLI de Supabase: los reescribe la herramienta, no la mano.
+src/shared/datos/tipos-supabase.ts
+
+# La documentacion la escriben personas y su formato es deliberado (tablas alineadas,
+# diagramas mermaid, saltos de linea a 90 columnas). Prettier la reflowea y ensucia
+# diffs que nadie pidio.
+*.md
+docs/

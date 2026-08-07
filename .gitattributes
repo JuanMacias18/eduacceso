@@ -1,0 +1,8 @@
+# El repo se desarrolla en Windows y el CI corre en Linux. Sin esto, Prettier
+# marca todo el arbol como mal formateado en una de las dos plataformas.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
