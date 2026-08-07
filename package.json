@@ -15,11 +15,13 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:tipos": "supabase gen types typescript --local > src/shared/datos/tipos-supabase.ts",
     "test:rls": "node scripts/verificar-rls.mjs",
     "test:budget": "npm run build && node scripts/verificar-presupuesto.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run test:rls && npm run test:budget"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
