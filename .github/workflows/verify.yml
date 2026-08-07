@@ -19,8 +19,10 @@ permissions:
   contents: read
 
 jobs:
+  # El nombre del job es el identificador del check que exige la proteccion de `main`.
+  # Se deja corto y estable a proposito: si se cambia, la regla de proteccion deja de
+  # encontrarlo y el merge pasa a estar permitido sin que nadie se entere.
   verify:
-    name: lint · typecheck · test · rls · presupuesto
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
