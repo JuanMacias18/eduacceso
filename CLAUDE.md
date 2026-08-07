@@ -13,7 +13,7 @@ cada sesión**.
 | Capa | Tecnología |
 |---|---|
 | Front | React 18 + Vite + TypeScript + Tailwind |
-| Datos / Auth / Storage | Supabase (Postgres 15) |
+| Datos / Auth / Storage | Supabase (Postgres 17) |
 | Backend | Supabase Edge Functions (Deno) |
 | Hosting | Vercel |
 | Pruebas | Vitest + Playwright + pgTAP |

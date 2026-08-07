@@ -77,10 +77,9 @@ viajaban al CSS de producción sin que ningún componente las usara. Acotado con
 
 **Decisiones que requieren confirmación humana.**
 
-- **Versión de Postgres.** `supabase init` generó `major_version = 17` en
-  `supabase/config.toml`; la tabla de stack de `CLAUDE.md` dice **Postgres 15**. Hay que
-  cerrarlo **antes de la primera migración**: es la versión con la que se desarrolla y
-  debería coincidir con la del proyecto Supabase real.
+- ~~**Versión de Postgres.**~~ **Resuelto el 2026-08-07: Postgres 17.** Es el valor por
+  defecto del CLI y lo que recibe un proyecto Supabase nuevo, así que local y producción
+  coinciden. La tabla de stack de `CLAUDE.md` se actualizó de 15 a 17.
 - **Tailwind v4 en vez de v3.** Documentado en `adr/0008` con las razones y las versiones
   comprobadas. Si se prefiere la v3, es el momento de decirlo.
 - **`docs/` excluida de Prettier.** El formateo automático reflowea las tablas y los
