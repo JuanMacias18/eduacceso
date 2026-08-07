@@ -16,6 +16,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // scripts/verificar-presupuesto.mjs lo lee para distinguir el bundle inicial
+    // de los trozos que se cargan de forma diferida.
+    manifest: true,
+  },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',

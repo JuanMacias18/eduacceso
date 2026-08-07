@@ -5,4 +5,13 @@
  * No reintroducir las directivas de la v3: el script scripts/verificar-tailwind-v4.mjs
  * falla el lint si reaparecen.
  */
-@import 'tailwindcss';
+/*
+ * `source(...)` acota la deteccion automatica de contenido a src/ y al index.html.
+ *
+ * Sin esto, v4 rastrea todo el repositorio y genera reglas para cualquier cadena que
+ * parezca una clase — incluidos los nombres que scripts/verificar-tailwind-v4.mjs cita
+ * en sus mensajes de ayuda. Se detecto con `bg-sky-500` y `text-ellipsis` viajando al
+ * CSS de produccion sin que ningun componente las usara.
+ */
+@import 'tailwindcss' source('../src');
+@source '../index.html';

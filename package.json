@@ -14,7 +14,10 @@
     "lint": "prettier --check . && eslint . --max-warnings 0 && node scripts/verificar-tailwind-v4.mjs",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:rls": "node scripts/verificar-rls.mjs",
+    "test:budget": "npm run build && node scripts/verificar-presupuesto.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run test:rls && npm run test:budget"
   },
   "dependencies": {
     "react": "^18.3.1",
