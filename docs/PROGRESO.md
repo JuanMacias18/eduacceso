@@ -56,6 +56,11 @@ Se autodestruye justo cuando empieza ese encargo. Probado en los dos estados.
 **Verificado.** `npm run verify` en verde. 10 pruebas unitarias. Bundle inicial 44.3 KB gzip,
 24.6% del presupuesto de 180 KB. `npm run dev` levanta sin un solo error de consola.
 
+La regla de dirección de dependencias está **demostrada en la historia de git**, como pide el
+criterio de aceptación: el commit `54f84bd` introduce un `import '@/evaluacion'` dentro de
+`academico`, `npm run verify` se detiene en rojo en el paso de `lint`, y `55dcfdf` lo revierte.
+Los dos commits se dejaron a propósito para que la evidencia quede en el repositorio.
+
 **Hallazgo durante el trabajo.** La detección automática de contenido de Tailwind v4 rastreaba
 todo el repositorio y generaba reglas para nombres de clase que solo existen como texto en los
 mensajes de ayuda de `scripts/verificar-tailwind-v4.mjs`: `bg-sky-500` y `text-ellipsis`
