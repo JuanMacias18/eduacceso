@@ -1,0 +1,45 @@
+name: verify
+
+# El CI corre exactamente el mismo comando que se corre en local. Si `npm run verify`
+# pasa en tu maquina y falla aqui, el problema es el entorno, no el criterio — y eso es
+# una diferencia que se puede depurar. Ver docs/AGENT_LOOP.md.
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+# Un push nuevo sobre la misma rama cancela la ejecucion anterior.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: lint · typecheck · test · rls · presupuesto
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Un solo paso a proposito: verify es la puerta, y se cruza entera o no se cruza.
+      # Dentro van, en orden: prettier + eslint (incluida la direccion de dependencias
+      # entre modulos y la guardia de Tailwind v4), tsc, vitest, las pruebas de
+      # aislamiento RLS y el presupuesto de bundle.
+      - name: npm run verify
+        run: npm run verify
