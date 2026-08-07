@@ -7,7 +7,7 @@
 
 | Encargo | Estado | Fecha | Notas |
 |---|---|---|---|
-| 01 · Cimientos | en revisión | 2026-08-07 | Código completo y `verify` verde. Faltan 3 compuertas humanas (ver abajo) |
+| 01 · Cimientos | en revisión | 2026-08-07 | Código completo, `verify` verde en local y en CI. Faltan `supabase start` (Docker apagado) y proteger `main` (bloqueado por el plan de GitHub) |
 | 02 · Esquema y RLS | pendiente | — | Desbloqueado: reglas de evaluación y recuperación cerradas |
 | 03 · Esqueleto vertical | pendiente | — | |
 
@@ -67,13 +67,28 @@ mensajes de ayuda de `scripts/verificar-tailwind-v4.mjs`: `bg-sky-500` y `text-e
 viajaban al CSS de producción sin que ningún componente las usara. Acotado con
 `source('../src')`; el CSS bajó de 7.81 kB a 5.60 kB.
 
-**Pendiente — tres compuertas humanas.**
+**Compuertas humanas — estado al cerrar la sesión.**
 
-1. **`supabase start` sin verificar.** Docker Desktop no estaba corriendo durante la sesión.
-   `supabase init` sí quedó hecho. Es criterio de aceptación del encargo.
-2. **Push de `dev` a `origin` y CI en verde.** No se hizo: es una acción hacia afuera y
-   requiere autorización.
-3. **Proteger `main`.** Es un cambio de configuración del repositorio en GitHub.
+1. ✅ **Push de `dev` y CI en verde.** Autorizado y hecho. El workflow `verify` pasa en
+   GitHub Actions en ~30 s. El job se llama `verify` a secas: ese nombre es el identificador
+   que usará la protección de rama, así que se dejó corto y estable a propósito.
+2. ⛔ **Proteger `main`: BLOQUEADO por el plan de GitHub.** Se intentaron las dos vías y las
+   dos devuelven `403 Upgrade to GitHub Pro or make this repository public`:
+   - protección clásica — `PUT /repos/:owner/:repo/branches/main/protection`
+   - rulesets — `POST /repos/:owner/:repo/rulesets`
+
+   En repositorios **privados** de cuenta personal, ambas funciones son de pago. Las salidas
+   posibles son: pagar GitHub Pro, hacer público el repositorio (**no recomendable**: es un
+   sistema con datos de menores, y aunque hoy el código no tenga secretos, la superficie
+   cambia), o aceptar que la regla 17 queda sostenida solo por disciplina más el check de CI
+   en los PR. Existe también un `pre-push` local que rechace `main`, pero es del lado del
+   cliente: protege del descuido propio, no del error deliberado.
+
+   **Decisión pendiente de dirección.** Mientras tanto, `main` acepta push directo.
+3. ⏳ **`supabase start` sin verificar.** Docker Desktop no estaba corriendo en ningún momento
+   de la sesión. `supabase init` sí quedó hecho y `supabase/config.toml` está en el repo. Es
+   criterio de aceptación del encargo 01 y debe comprobarse antes de dar el encargo por
+   cerrado — con Docker arriba, basta `supabase start`.
 
 **Decisiones que requieren confirmación humana.**
 
