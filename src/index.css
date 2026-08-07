@@ -1,0 +1,8 @@
+/*
+ * Tailwind CSS v4. La configuración es CSS-first: se personaliza con @theme aquí,
+ * no con un tailwind.config.js. Ver docs/adr/0008-tailwind-v4.md.
+ *
+ * No usar las directivas de v3 (@tailwind base/components/utilities): el script
+ * scripts/verificar-tailwind-v4.mjs falla el lint si reaparecen.
+ */
+@import 'tailwindcss';

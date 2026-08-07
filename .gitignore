@@ -1,6 +1,21 @@
-﻿node_modules/
+node_modules/
 dist/
 .env
 .env.local
+.env.*.local
 .vercel/
 .DS_Store
+
+# Vite / TypeScript
+*.tsbuildinfo
+stats.html
+
+# Pruebas
+coverage/
+
+# Supabase CLI (estado local, nunca versionado)
+supabase/.temp/
+supabase/.branches/
+
+# Configuración local de herramientas del desarrollador
+.claude/
