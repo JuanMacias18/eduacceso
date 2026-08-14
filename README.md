@@ -26,9 +26,14 @@ supabase start                   # imprime la URL y la clave anon locales
 Copia de la salida de `supabase start` los dos valores a `.env.local`:
 
 ```
-VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_URL=http://127.0.0.1:54421
 VITE_SUPABASE_ANON_KEY=<la clave "anon key" que imprimió el comando>
 ```
+
+> **Los puertos locales son el bloque `544xx`, no el `543xx` por defecto.** API 54421,
+> base 54422, Studio 54423. Es deliberado: así este proyecto convive con otros proyectos
+> Supabase levantados en la misma máquina sin pelearse por los puertos. Está en
+> [`supabase/config.toml`](supabase/config.toml).
 
 Y arranca:
 

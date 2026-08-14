@@ -7,7 +7,7 @@
 
 | Encargo | Estado | Fecha | Notas |
 |---|---|---|---|
-| 01 · Cimientos | en revisión | 2026-08-07 | Código completo, `verify` verde en local y en CI. Faltan `supabase start` (Docker apagado) y proteger `main` (bloqueado por el plan de GitHub) |
+| 01 · Cimientos | en revisión | 2026-08-07 | Criterios de aceptación cumplidos salvo proteger `main`, bloqueado por el plan de GitHub. Pendiente el Bucle 2: revisión humana del diff |
 | 02 · Esquema y RLS | pendiente | — | Desbloqueado: reglas de evaluación y recuperación cerradas |
 | 03 · Esqueleto vertical | pendiente | — | |
 
@@ -85,10 +85,26 @@ viajaban al CSS de producción sin que ningún componente las usara. Acotado con
    cliente: protege del descuido propio, no del error deliberado.
 
    **Decisión pendiente de dirección.** Mientras tanto, `main` acepta push directo.
-3. ⏳ **`supabase start` sin verificar.** Docker Desktop no estaba corriendo en ningún momento
-   de la sesión. `supabase init` sí quedó hecho y `supabase/config.toml` está en el repo. Es
-   criterio de aceptación del encargo 01 y debe comprobarse antes de dar el encargo por
-   cerrado — con Docker arriba, basta `supabase start`.
+3. ✅ **`supabase start` verificado.** Postgres **17.6** respondiendo, esquema `auth` con 23
+   tablas, GoTrue `/health` en 200, REST en 200 y Studio en 54423. `npm run db:tipos` se
+   ejecutó contra la base real y regeneró `tipos-supabase.ts`. Comprobado además el camino
+   completo desde el navegador: el módulo del cliente se importa, `obtenerCliente()`
+   construye, apunta a `54421` y `auth.getSession()` responde sin error.
+
+   Hicieron falta dos ajustes para que arrancara, ambos en `supabase/config.toml`:
+
+   - **Puertos movidos al bloque `544xx`** (API 54421, base 54422, Studio 54423). El bloque
+     por defecto `543xx` estaba ocupado por otro proyecto Supabase local (`business-os`).
+     El CLI sugería parar ese proyecto; se prefirió reasignar puertos, que no interrumpe
+     trabajo ajeno y deja los dos proyectos conviviendo.
+   - **`[analytics] enabled = false`.** En Windows, analytics (Logflare) exige el demonio de
+     Docker expuesto en `tcp://localhost:2375`; sin eso queda *unhealthy* y arrastra a
+     `storage` y `pg_meta`, con lo que `supabase start` falla entero. Es el explorador de
+     logs de Studio y no lo necesita nada de este proyecto.
+
+   **La guardia de `service_role` quedó demostrada contra credenciales reales:** se le pasaron
+   al cliente, desde el navegador, la `SERVICE_ROLE_KEY` y la `sb_secret_…` que imprimió este
+   mismo `supabase start`, y las rechazó las dos.
 
 **Decisiones que requieren confirmación humana.**
 
