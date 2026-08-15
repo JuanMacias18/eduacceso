@@ -7,8 +7,8 @@
 
 | Encargo | Estado | Fecha | Notas |
 |---|---|---|---|
-| 01 · Cimientos | en revisión | 2026-08-07 | Criterios de aceptación cumplidos salvo proteger `main`, bloqueado por el plan de GitHub. Pendiente el Bucle 2: revisión humana del diff |
-| 02 · Esquema y RLS | pendiente | — | Desbloqueado: reglas de evaluación y recuperación cerradas |
+| 01 · Cimientos | **cerrado** | 2026-08-15 | Todos los criterios cumplidos. Repo público, `main` protegida con el check `verify`, secret scanning y Dependabot activos |
+| 02 · Esquema y RLS | en curso | 2026-08-15 | 3 de 9 rebanadas: esquema, arnés pgTAP e índices. Siguiente: políticas RLS |
 | 03 · Esqueleto vertical | pendiente | — | |
 
 ## Bitácora
@@ -128,6 +128,50 @@ viajaban al CSS de producción sin que ningún componente las usara. Acotado con
 los cuatro módulos, `shared/config/entorno.ts` + pruebas, `shared/datos/supabase.ts` +
 tipos), `scripts/` (tres comprobaciones), `.github/workflows/verify.yml`, `supabase/`
 (config.toml), `docs/adr/0008-tailwind-v4.md`, este archivo.
+
+### 2026-08-15 · Encargo 02 — En curso (3 de 9 rebanadas)
+
+**Hecho.**
+
+- **`0001_esquema_inicial.sql`** — tipos y las 14 tablas del núcleo académico: identidad,
+  catálogo, cohortes, matrículas, cursos, inscripciones, contenido y consentimiento de Ley
+  1581. Falta evaluación (0005) y plantillas (0006).
+- **`0002_indices.sql`** — cobertura de foreign keys y caminos calientes de la sección 8.
+- **Arnés pgTAP** por `supabase test db`, sustituyendo al marcador del encargo 01.
+
+**Decisión de secuencia que conviene conocer.** El encargo separa el esquema (`0001`) de la
+RLS (`0003`), pero la regla 1 pide RLS en toda tabla nueva con política por defecto de
+denegar. Se concilian **activando RLS en la misma migración que crea cada tabla**, sin
+políticas —que es exactamente el estado de denegar por defecto—, y dejando las políticas para
+`0003`. Así ninguna tabla existe, en ningún punto de la secuencia, sin RLS. Las tablas de
+`0005` y `0006` seguirán el mismo patrón.
+
+**El trinquete de `test:rls` funcionó.** En cuanto apareció la primera migración se puso en
+rojo y obligó a escribir el runner de verdad antes de poder commitear. Era exactamente para
+eso.
+
+**Dos pruebas de aptitud, ambas comparando contra cadena vacía en vez de contra un conteo,
+para que el fallo diga *qué* se rompió:**
+
+1. *Ninguna tabla sin RLS.* Demostrada: al crear una tabla descuidada, el fallo imprime
+   `have: tabla_descuidada`.
+2. *Ninguna foreign key sin índice.* **Encontró un defecto real el primer día:** la foreign
+   key compuesta `(matricula_id, estudiante_id)` de `inscripciones` no estaba cubierta —
+   había dos índices sueltos, uno por columna, y ninguno la cubre. No se habría visto
+   revisando el archivo a ojo.
+
+**Notas técnicas para la siguiente sesión.**
+
+- Al convertir `pg_index.indkey` a `smallint[]`, el array **empieza en 0**, no en 1.
+- `supabase db reset` termina con "Restarting containers…" y Postgres tarda un momento más en
+  aceptar conexiones. Lanzar pruebas inmediatamente después da un falso rojo con el esquema
+  aparentemente vacío. Si aparece un fallo raro justo tras un reset, es esto.
+- El CI levanta **solo Postgres** (`supabase start -x …`): las pruebas pgTAP hablan directo
+  con la base. CI pasó de ~30 s a ~2 min.
+
+**Pendiente.** Rebanadas 4 a 9: políticas RLS y funciones `app`, auditoría, evaluación de dos
+niveles con habilitaciones, plantillas, semilla anonimizada y el resto de la suite de pruebas
+del encargo.
 
 ### 2026-08-14 · Encargo 01 — Revisión propia y correcciones
 
