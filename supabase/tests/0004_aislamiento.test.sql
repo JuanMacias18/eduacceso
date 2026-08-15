@@ -71,9 +71,9 @@ values
 insert into cursos (id, cohorte_id, materia_id, docente_id, periodo_orden, estado)
 values
   ('11111111-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001',
-   'dddddddd-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 1, 'abierto'),
+   'dddddddd-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 1, 'borrador'),
   ('11111111-0000-0000-0000-000000000002', 'eeeeeeee-0000-0000-0000-000000000002',
-   'dddddddd-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', 1, 'abierto');
+   'dddddddd-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', 1, 'borrador');
 
 insert into inscripciones (id, curso_id, matricula_id, estudiante_id)
 values
