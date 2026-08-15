@@ -1,57 +1,74 @@
 #!/usr/bin/env node
 /**
- * `test:rls` — marcador de posición con trinquete.
+ * `test:rls` — pruebas de aislamiento y de esquema, en pgTAP.
  *
- * El encargo 01 exige que `npm run verify` exista y salga en verde desde el primer día,
- * aunque varios de sus pasos todavía no prueben nada (ver docs/AGENT_LOOP.md). El riesgo
- * evidente es que un marcador que devuelve verde se quede verde para siempre y la prueba
- * de aislamiento —la que docs/plan.md 5.3 llama "no negociable"— no se escriba nunca.
+ * Sustituye al marcador de posición del encargo 01. Aquel salía verde mientras no hubiera
+ * migraciones y se ponía en rojo solo en cuanto apareció la primera; este es el runner de
+ * verdad.
  *
- * Por eso esto no es un `exit 0` incondicional:
+ * Es "la prueba que no es negociable" de docs/plan.md 5.3: sin ella la RLS se degrada en
+ * silencio — alguien añade una tabla, olvida la política, y nadie se entera hasta que un
+ * estudiante ve las notas de otro.
  *
- *   · Sin migraciones  → verde. No hay datos que aislar todavía.
- *   · Con migraciones  → rojo. Existe esquema, luego existe algo que puede filtrarse,
- *                        y este script tiene que haber sido reemplazado por las pruebas
- *                        reales del encargo 02.
- *
- * Dicho de otro modo: se autodestruye exactamente cuando empieza el encargo 02.
+ * Requiere la base local levantada (`supabase start`).
  */
+import { spawnSync } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { exit } from 'node:process'
 
-const DIRECTORIO_MIGRACIONES = join(process.cwd(), 'supabase', 'migrations')
+const raiz = process.cwd()
 
-/** Migraciones .sql presentes, ignorando lo que no lo sea. */
-function migraciones() {
+const archivosSql = (directorio) => {
   try {
-    return readdirSync(DIRECTORIO_MIGRACIONES).filter((archivo) => archivo.endsWith('.sql'))
+    return readdirSync(join(raiz, ...directorio)).filter((archivo) => archivo.endsWith('.sql'))
   } catch {
     return []
   }
 }
 
-const encontradas = migraciones()
+const migraciones = archivosSql(['supabase', 'migrations'])
+const pruebas = archivosSql(['supabase', 'tests']).filter((archivo) =>
+  archivo.endsWith('.test.sql'),
+)
 
-if (encontradas.length === 0) {
-  console.log(
-    'test:rls · sin migraciones todavía: no hay esquema que aislar.\n' +
-      '          Este paso se pondrá en rojo solo, en cuanto aparezca la primera migración.',
+// `supabase test db` sale en verde con cero archivos de prueba. Sin esta guarda, borrar la
+// carpeta de pruebas dejaría `verify` en verde y el sistema sin red de seguridad.
+if (migraciones.length > 0 && pruebas.length === 0) {
+  console.error(
+    `\n  Hay ${migraciones.length} migración(es) y ningún archivo en supabase/tests/.\n` +
+      '  Un esquema sin pruebas de aislamiento no puede darse por seguro.\n' +
+      '  Ver docs/encargos/02-esquema-y-rls.md, punto 6.\n',
   )
-  exit(0)
+  exit(1)
 }
 
-console.error(
-  `\n  test:rls sigue siendo el marcador de posición del encargo 01, y ya hay ${encontradas.length} migración(es):\n`,
-)
-for (const archivo of encontradas) console.error(`    · ${archivo}`)
-console.error(
-  '\n  Hay esquema, luego hay datos que pueden filtrarse entre estudiantes.\n' +
-    '  Sustituye este script por las pruebas de aislamiento reales antes de seguir:\n' +
-    '    · autenticarse como estudiante A e intentar leer notas, matrículas,\n' +
-    '      inscripciones y contenido del estudiante B — cero filas en cada consulta;\n' +
-    '    · repetir con dos docentes de cursos distintos;\n' +
-    '    · fallar si alguna tabla de `public` queda sin RLS habilitada.\n' +
-    '\n  Alcance completo en docs/encargos/02-esquema-y-rls.md, punto 6.\n',
-)
-exit(1)
+if (pruebas.length === 0) {
+  console.error('\n  No hay pruebas que ejecutar y tampoco migraciones. Algo va mal.\n')
+  exit(1)
+}
+
+const resultado = spawnSync('supabase', ['test', 'db'], {
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+})
+
+if (resultado.error) {
+  console.error(
+    `\n  No se pudo ejecutar el CLI de Supabase: ${resultado.error.message}\n` +
+      '  Instálalo, o levanta la base con `supabase start` si ya lo tienes.\n',
+  )
+  exit(1)
+}
+
+if (resultado.status !== 0) {
+  console.error(
+    '\n  Fallaron las pruebas de aislamiento.\n' +
+      '  Si alguna consulta devolvió filas que no debería, la política está mal escrita:\n' +
+      '  arréglala. Nunca desactives la RLS ni uses la service_role key para que pase\n' +
+      '  (CLAUDE.md, regla 2 — es el atajo que deja el sistema abierto).\n',
+  )
+  exit(resultado.status ?? 1)
+}
+
+console.log(`\ntest:rls · ${pruebas.length} archivo(s) de prueba en verde.\n`)

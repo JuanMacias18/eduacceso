@@ -39,6 +39,18 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Instalar el CLI de Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Solo Postgres. Las pruebas pgTAP hablan directamente con la base, asi que levantar
+      # Studio, Realtime, Storage o las Edge Functions seria pagar minutos de CI por
+      # contenedores que nadie consulta. Analytics ademas queda fuera por lo mismo que en
+      # local: exige el demonio de Docker expuesto por TCP.
+      - name: Levantar Postgres local
+        run: supabase start -x studio,realtime,storage,imgproxy,edge-runtime,functions,analytics,vector,inbucket,meta
+
       # Un solo paso a proposito: verify es la puerta, y se cruza entera o no se cruza.
       # Dentro van, en orden: prettier + eslint (incluida la direccion de dependencias
       # entre modulos y la guardia de Tailwind v4), tsc, vitest, las pruebas de
