@@ -179,15 +179,17 @@ Con ellos entra una segunda barrera por debajo de la RLS: **`delete` no se conce
 `for all` de más sobre `matriculas` o `inscripciones`, el borrado sigue sin pasar (regla 6).
 `anon` no recibe ningún privilegio: aquí no hay nada público.
 
-**Decisión que necesita confirmación: el alcance del coordinador.** La matriz de la sección 7
-dice "su ámbito completo" y `plan.md` dice "su cohorte / sede completa", pero **el modelo de
-datos no tiene ningún mecanismo para acotar un coordinador a una sede o cohorte**: no existe
-`cohortes.coordinador_id` ni una tabla puente. Implementado para v1 como **alcance
-organizacional completo**, que es lo único que el esquema expresa hoy.
+**Alcance del coordinador — RESUELTO el 2026-08-15: organizacional completo.** La matriz de
+la sección 7 dice "su ámbito completo" y `plan.md` dice "su cohorte / sede completa", pero el
+modelo de datos no tiene con qué acotarlo: no existe `cohortes.coordinador_id` ni tabla
+puente. Confirmado con dirección que **EduAcceso es un solo instituto**, así que un
+coordinador ve todas las cohortes y una tabla puente sería complejidad sin contrapartida.
 
 No es una puerta de una vía: acotarlo después es añadir una tabla y endurecer políticas, sin
-migrar datos. Pero mientras tanto **cualquier coordinador ve todas las cohortes**, y eso
-conviene confirmarlo antes de que haya más de una sede.
+migrar un solo dato.
+
+> **Revisar si** aparece una segunda sede con coordinación propia, o si se contrata
+> coordinación por región. Ese es el momento de introducir el alcance, no antes.
 
 **Notas técnicas para la siguiente sesión.**
 

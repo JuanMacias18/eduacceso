@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(3);
+select plan(6);
 
 -- `using` decide qué filas se pueden tocar; `with check` decide cómo pueden quedar. Sin
 -- `with check`, un docente puede mover una nota a una inscripción de otro curso: la fila de
@@ -55,6 +55,63 @@ select is(
   ),
   '',
   'Toda función de app es security definer con search_path fijo'
+);
+
+-- ---------------------------------------------------------------------------
+-- La capa que hay DEBAJO de la RLS: los privilegios de tabla.
+--
+-- Se descubrió por las malas que sin `grant select` las políticas ni se evalúan y toda
+-- consulta muere con "permission denied". Estas tres comprobaciones convierten esa lección
+-- en invariantes, para que las migraciones que vengan no puedan olvidarlo en silencio.
+-- ---------------------------------------------------------------------------
+
+select is(
+  (
+    select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and not has_table_privilege('authenticated', c.oid, 'SELECT')
+  ),
+  '',
+  'Toda tabla concede SELECT a authenticated (si no, la RLS ni llega a evaluarse)'
+);
+
+-- Regla 6: nada se borra. El privilegio solo existe donde el modelo contempla el borrado, y
+-- eso es una segunda barrera por debajo de la RLS: aunque aparezca una política `for all`
+-- de más sobre matriculas o inscripciones, el DELETE sigue sin pasar.
+select is(
+  (
+    select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and c.relname not in ('modulos', 'recursos', 'progreso_recurso')
+      and has_table_privilege('authenticated', c.oid, 'DELETE')
+  ),
+  '',
+  'Solo el contenido y el progreso admiten DELETE; los registros académicos no'
+);
+
+-- Aquí no hay nada público: todo el que consulta ha iniciado sesión.
+select is(
+  (
+    select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and (
+        has_table_privilege('anon', c.oid, 'SELECT')
+        or has_table_privilege('anon', c.oid, 'INSERT')
+        or has_table_privilege('anon', c.oid, 'UPDATE')
+        or has_table_privilege('anon', c.oid, 'DELETE')
+      )
+  ),
+  '',
+  'anon no tiene ningún privilegio sobre las tablas del portal'
 );
 
 select * from finish();
