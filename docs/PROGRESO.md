@@ -160,6 +160,35 @@ para que el fallo diga *qué* se rompió:**
    había dos índices sueltos, uno por columna, y ninguno la cubre. No se habría visto
    revisando el archivo a ojo.
 
+**`0003_rls.sql` — funciones `app` y políticas.** 46 políticas sobre las 14 tablas, ninguna
+de escritura sin `with check`. Las de aislamiento están demostradas por mutación: al
+desactivar la RLS de `matriculas`, la prueba se pone en rojo.
+
+**Hallazgo grave durante esta rebanada: faltaban los `GRANT` de tabla.** La RLS solo entra a
+decidir si el rol ya tiene el privilegio; sin `grant select`, toda consulta muere con
+`permission denied for table` y las políticas **ni se evalúan**. Los privilegios por defecto
+del proyecto no cubrían las tablas nuevas.
+
+De haber llegado así a producción, la aplicación no habría funcionado en absoluto — y el
+síntoma empuja exactamente hacia el atajo que prohíbe la regla 2: sacar la `service_role` key
+para "arreglarlo". Ahora los privilegios son **explícitos** en la migración, no heredados de
+comportamiento implícito que puede diferir entre local y producción.
+
+Con ellos entra una segunda barrera por debajo de la RLS: **`delete` no se concede** salvo en
+`modulos`, `recursos` y `progreso_recurso`. Aunque mañana alguien escriba una política
+`for all` de más sobre `matriculas` o `inscripciones`, el borrado sigue sin pasar (regla 6).
+`anon` no recibe ningún privilegio: aquí no hay nada público.
+
+**Decisión que necesita confirmación: el alcance del coordinador.** La matriz de la sección 7
+dice "su ámbito completo" y `plan.md` dice "su cohorte / sede completa", pero **el modelo de
+datos no tiene ningún mecanismo para acotar un coordinador a una sede o cohorte**: no existe
+`cohortes.coordinador_id` ni una tabla puente. Implementado para v1 como **alcance
+organizacional completo**, que es lo único que el esquema expresa hoy.
+
+No es una puerta de una vía: acotarlo después es añadir una tabla y endurecer políticas, sin
+migrar datos. Pero mientras tanto **cualquier coordinador ve todas las cohortes**, y eso
+conviene confirmarlo antes de que haya más de una sede.
+
 **Notas técnicas para la siguiente sesión.**
 
 - Al convertir `pg_index.indkey` a `smallint[]`, el array **empieza en 0**, no en 1.
