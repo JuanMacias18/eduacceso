@@ -72,19 +72,25 @@ viajaban al CSS de producción sin que ningún componente las usara. Acotado con
 1. ✅ **Push de `dev` y CI en verde.** Autorizado y hecho. El workflow `verify` pasa en
    GitHub Actions en ~30 s. El job se llama `verify` a secas: ese nombre es el identificador
    que usará la protección de rama, así que se dejó corto y estable a propósito.
-2. ⛔ **Proteger `main`: BLOQUEADO por el plan de GitHub.** Se intentaron las dos vías y las
-   dos devuelven `403 Upgrade to GitHub Pro or make this repository public`:
-   - protección clásica — `PUT /repos/:owner/:repo/branches/main/protection`
-   - rulesets — `POST /repos/:owner/:repo/rulesets`
+2. ✅ **`main` protegida.** Requiere PR (0 aprobaciones, para que un equipo de una persona
+   pueda mezclar), exige el check `verify` en verde y con la rama al día, historia lineal, y
+   prohíbe force-push y borrado.
 
-   En repositorios **privados** de cuenta personal, ambas funciones son de pago. Las salidas
-   posibles son: pagar GitHub Pro, hacer público el repositorio (**no recomendable**: es un
-   sistema con datos de menores, y aunque hoy el código no tenga secretos, la superficie
-   cambia), o aceptar que la regla 17 queda sostenida solo por disciplina más el check de CI
-   en los PR. Existe también un `pre-push` local que rechace `main`, pero es del lado del
-   cliente: protege del descuido propio, no del error deliberado.
+   **El repositorio se hizo público el 2026-08-14 para conseguirlo**, por decisión de
+   dirección: tanto la protección clásica como los rulesets son de pago en repositorios
+   privados de cuenta personal. Antes de publicar se barrió la historia completa de los 14
+   commits: **cero credenciales**, `.env.local` nunca versionado, y ningún dato personal de
+   estudiantes (todavía no hay semilla).
 
-   **Decisión pendiente de dirección.** Mientras tanto, `main` acepta push directo.
+   **Dos cosas que conviene tener presentes ahora que es público:**
+
+   - `docs/PENDIENTES.md` P1 dice por escrito que se está evaluando **cobrar por la
+     recuperación** y que falta visto bueno jurídico, con menores de por medio. Es material
+     interno y hoy es legible por cualquiera. Conviene decidir si se reformula o se saca del
+     repositorio.
+   - Pagar GitHub Pro más adelante **no vuelve privado lo ya publicado**, y tampoco es lo que
+     protege los datos de los menores: eso lo hará la RLS del encargo 02. Si el objetivo es
+     volver a privado, hay que hacerlo pronto y asumiendo que lo indexado no se recupera.
 3. ✅ **`supabase start` verificado.** Postgres **17.6** respondiendo, esquema `auth` con 23
    tablas, GoTrue `/health` en 200, REST en 200 y Studio en 54423. `npm run db:tipos` se
    ejecutó contra la base real y regeneró `tipos-supabase.ts`. Comprobado además el camino
@@ -122,6 +128,39 @@ viajaban al CSS de producción sin que ningún componente las usara. Acotado con
 los cuatro módulos, `shared/config/entorno.ts` + pruebas, `shared/datos/supabase.ts` +
 tipos), `scripts/` (tres comprobaciones), `.github/workflows/verify.yml`, `supabase/`
 (config.toml), `docs/adr/0008-tailwind-v4.md`, este archivo.
+
+### 2026-08-14 · Encargo 01 — Revisión propia y correcciones
+
+Segunda pasada sobre el código del encargo antes de dar paso al 02. Aparecieron **dos
+defectos propios**, los dos corregidos:
+
+1. **`detectSessionInUrl: false` en el cliente de Supabase.** Lo justifiqué citando
+   `adr/0003`, y ese ADR dice justo lo contrario: docentes, coordinación y administración
+   tienen **recuperación estándar**, y los estudiantes que registran correo tienen
+   **recuperación automática**. Los dos flujos aterrizan con los tokens en la URL, así que
+   con la opción en `false` la sesión no se habría establecido y la recuperación de
+   contraseña habría fallado **en silencio**. No habría dado la cara hasta el encargo 03.
+   Corregido a `true`.
+
+2. **`leerEntorno` fallaba hacia el lado permisivo.** Un token con forma de JWT cuyo payload
+   no se puede decodificar se trataba como clave válida: la comprobación de `service_role`
+   no llegaba a mirar nada y nadie se enteraba. Ahora se rechaza con un mensaje que apunta a
+   la causa habitual (clave copiada a medias). De paso, el payload se decodifica pasando por
+   `TextDecoder` en vez de leer los bytes de `atob` como si fueran texto.
+
+Dos mejoras menores: `.npmrc` con `engine-strict=true`, para que instalar con una versión de
+Node fuera de rango falle en el momento y no más tarde con errores raros; y
+`verificar-presupuesto.mjs` recorre el manifiesto por claves en vez de buscar la clave de
+vuelta por identidad, que era una vuelta innecesaria.
+
+**Verificado:** `verify` en verde, 12 pruebas. Comprobado además en el navegador que el
+cliente construye, que un JWT ilegible se rechaza y que la `service_role` real sigue
+rechazándose.
+
+**Nota honesta sobre la cobertura:** la prueba del payload con acentos fija el
+comportamiento correcto, pero no habría detectado el defecto anterior — el texto mal
+decodificado seguía siendo JSON válido y el campo `role` se leía igual. La prueba que sí
+cambia el comportamiento es la del token ilegible.
 
 ## Deuda técnica aceptada conscientemente
 

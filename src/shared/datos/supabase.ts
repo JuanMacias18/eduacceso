@@ -41,8 +41,11 @@ export function crearCliente(fuente: Record<string, string | undefined>): Client
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      // El portal no usa enlaces de recuperación en la URL (ver docs/adr/0003).
-      detectSessionInUrl: false,
+      // Obligatorio, no opcional: `adr/0003` da recuperación estándar a docentes,
+      // coordinación y administración, y recuperación automática a los estudiantes que sí
+      // registran correo. Esos enlaces aterrizan con los tokens en la URL, y con esto en
+      // `false` la sesión no se establece y el flujo falla en silencio.
+      detectSessionInUrl: true,
     },
   })
 }

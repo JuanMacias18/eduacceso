@@ -27,18 +27,31 @@ export class EntornoInvalidoError extends Error {
 /** Prefijo de las claves secretas de Supabase en el formato nuevo. */
 const PREFIJO_CLAVE_SECRETA = 'sb_secret_'
 
-/** Decodifica el payload de un JWT, o `null` si no lo es. */
-function payloadDeJwt(valor: string): Record<string, unknown> | null {
+/** ¿Tiene la forma de un JWT (tres partes separadas por punto)? */
+export function pareceJwt(valor: string): boolean {
   const partes = valor.split('.')
-  if (partes.length !== 3) return null
+  return partes.length === 3 && partes.every((parte) => parte.length > 0)
+}
 
-  const payload = partes[1]
+/**
+ * Decodifica el payload de un JWT, o `null` si no se puede leer.
+ *
+ * `atob` devuelve bytes, no texto: pasarlos por `TextDecoder` es lo que hace que un payload
+ * con acentos se lea bien en vez de reventar el `JSON.parse`. Importa porque quien llama
+ * distingue "no es un JWT" de "es un JWT que no puedo leer", y esa diferencia decide si una
+ * clave se acepta.
+ */
+function payloadDeJwt(valor: string): Record<string, unknown> | null {
+  if (!pareceJwt(valor)) return null
+
+  const payload = valor.split('.')[1]
   if (!payload) return null
 
   try {
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const json = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
-    const decodificado: unknown = JSON.parse(json)
+    const binario = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
+    const bytes = Uint8Array.from(binario, (caracter) => caracter.charCodeAt(0))
+    const decodificado: unknown = JSON.parse(new TextDecoder().decode(bytes))
     return typeof decodificado === 'object' && decodificado !== null
       ? (decodificado as Record<string, unknown>)
       : null
@@ -82,6 +95,14 @@ export function leerEntorno(fuente: Record<string, string | undefined>): Entorno
     motivos.push(
       'VITE_SUPABASE_ANON_KEY contiene una clave de servicio. Esa clave ignora las políticas ' +
         'RLS y solo puede vivir en Edge Functions (CLAUDE.md, regla 3). Usa la clave anon.',
+    )
+  } else if (pareceJwt(anonKey) && payloadDeJwt(anonKey) === null) {
+    // Se rechaza en vez de dejar pasar. Un token con forma de JWT que no se puede leer es
+    // una clave rota o truncada al copiarla; aceptarlo significaría que la comprobación de
+    // service_role de arriba no llegó a mirar nada y no nos enteramos.
+    motivos.push(
+      'VITE_SUPABASE_ANON_KEY tiene forma de JWT pero su contenido no se puede leer. ' +
+        'Suele ser una clave copiada a medias: vuelve a copiarla de `supabase status`.',
     )
   }
 

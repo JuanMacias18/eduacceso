@@ -42,7 +42,7 @@ try {
  * Devuelve el conjunto de archivos que el navegador descarga en el primer arranque.
  */
 function archivosDeArranque() {
-  const entradas = Object.values(manifiesto).filter((registro) => registro.isEntry)
+  const entradas = Object.keys(manifiesto).filter((clave) => manifiesto[clave]?.isEntry)
   if (entradas.length === 0) {
     console.error('\n  El manifiesto no declara ninguna entrada (isEntry). Build incompleto.\n')
     exit(1)
@@ -66,10 +66,7 @@ function archivosDeArranque() {
     for (const importado of registro.imports ?? []) recorrer(importado)
   }
 
-  for (const entrada of entradas) {
-    const clave = Object.keys(manifiesto).find((k) => manifiesto[k] === entrada)
-    if (clave) recorrer(clave)
-  }
+  for (const entrada of entradas) recorrer(entrada)
 
   return { js: [...js], css: [...css] }
 }

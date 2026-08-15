@@ -2,14 +2,25 @@ import { describe, expect, it } from 'vitest'
 
 import { EntornoInvalidoError, esClaveDeServicio, leerEntorno } from './entorno.ts'
 
-/** Arma un JWT de mentira con el `role` pedido. No es una credencial: no va firmado. */
-function jwtDePrueba(rol: string): string {
-  const base64url = (objeto: unknown) =>
-    btoa(JSON.stringify(objeto)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+/**
+ * Arma un JWT de mentira con el `role` pedido. No es una credencial: no va firmado.
+ *
+ * El payload se codifica en UTF-8 antes de pasar por base64, que es lo que hace un emisor
+ * real. Si se usara `btoa(JSON.stringify(...))` a secas, un acento saldría en Latin-1 y la
+ * prueba de acentos validaría algo que no ocurre en producción.
+ */
+function jwtDePrueba(rol: string, extra: Record<string, unknown> = {}): string {
+  const base64url = (objeto: unknown) => {
+    const bytes = new TextEncoder().encode(JSON.stringify(objeto))
+    return btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+  }
 
   return [
     base64url({ alg: 'HS256', typ: 'JWT' }),
-    base64url({ iss: 'supabase', role: rol }),
+    base64url({ iss: 'supabase', role: rol, ...extra }),
     'firma-irrelevante-para-esta-prueba',
   ].join('.')
 }
@@ -81,6 +92,21 @@ describe('leerEntorno', () => {
     expect(() =>
       leerEntorno({ ...ENTORNO_VALIDO, VITE_SUPABASE_ANON_KEY: 'sb_secret_abc123' }),
     ).toThrow(/clave de servicio/)
+  })
+
+  // Sin esto la comprobación de service_role fallaría hacia el lado permisivo: un token
+  // ilegible pasaría como si fuera una clave anon legítima.
+  it('rechaza un token con forma de JWT cuyo contenido no se puede leer', () => {
+    expect(() => leerEntorno({ ...ENTORNO_VALIDO, VITE_SUPABASE_ANON_KEY: 'aaa.bbb.ccc' })).toThrow(
+      /no se puede leer/,
+    )
+  })
+
+  it('acepta un JWT con acentos en el payload en vez de reventar al decodificarlo', () => {
+    const conAcentos = jwtDePrueba('anon', { nombre: 'Coordinación Puerto López' })
+    expect(
+      leerEntorno({ ...ENTORNO_VALIDO, VITE_SUPABASE_ANON_KEY: conAcentos }).supabaseAnonKey,
+    ).toBe(conAcentos)
   })
 })
 
