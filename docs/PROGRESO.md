@@ -8,7 +8,7 @@
 | Encargo | Estado | Fecha | Notas |
 |---|---|---|---|
 | 01 · Cimientos | **cerrado** | 2026-08-15 | Todos los criterios cumplidos. Repo público, `main` protegida con el check `verify`, secret scanning y Dependabot activos |
-| 02 · Esquema y RLS | en curso | 2026-08-15 | 8 de 9 rebanadas. Falta cerrar la suite de pruebas del encargo |
+| 02 · Esquema y RLS | en revisión | 2026-08-19 | 9 de 9 rebanadas. 8 migraciones, 83 pruebas pgTAP. Pendiente el Bucle 2: revisión humana |
 | 03 · Esqueleto vertical | pendiente | — | |
 
 ## Bitácora
@@ -223,6 +223,31 @@ Las notas sembradas son **deterministas, no aleatorias**: una semilla que cambia
 reset hace imposible razonar sobre lo que se ve en pantalla. La contraseña de todas las
 cuentas es `eduacceso-local`, credencial de desarrollo para una base que se recrea con
 `db reset`.
+
+**Rebanada 9 — cierre de la suite.** Al repasar la lista del encargo punto por punto
+aparecieron **dos huecos reales**, los dos del mismo tipo: algo escrito en una rebanada
+temprana que nunca se completó cuando llegaron las tablas de después.
+
+1. **La prueba de aislamiento nunca probó `notas`.** Se escribió en la rebanada de RLS, antes
+   de que `notas` existiera (0005), y la palabra solo aparecía en un comentario. Era el
+   **primer punto** de la lista del encargo y el dato más sensible del sistema.
+   `0009_aislamiento_notas.test.sql` lo cubre con el caso difícil: los dos estudiantes en el
+   **mismo curso**, para que la política tenga que discriminar por inscripción y no le baste
+   con filtrar por curso.
+
+2. **`v_nota_efectiva` no tenía `GRANT`.** Correcta y a la vez inservible: cualquier consulta
+   moría con `permission denied for view`. La invariante que introduje en la rebanada 5 solo
+   miraba `relkind = 'r'`, es decir tablas, y la vista se coló por ahí. Corregido en
+   `0008_grant_vista_nota_efectiva.sql` —migración nueva, no edición de `0005`— y la
+   invariante ahora cubre vistas.
+
+**Dos invariantes nuevas sobre vistas**, porque una vista es la forma más discreta de abrir
+un agujero:
+
+- toda vista concede `SELECT` a `authenticated`;
+- **toda vista se ejecuta con `security_invoker`**. Verificado por mutación: al quitárselo a
+  `v_nota_efectiva`, un estudiante pasa de ver 1 fila a ver **10** — el historial de notas de
+  todo el instituto. Lo atrapan dos pruebas a la vez, la estructural y la de comportamiento.
 
 **Notas técnicas para la siguiente sesión.**
 

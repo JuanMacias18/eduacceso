@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(6);
+select plan(7);
 
 -- `using` decide qué filas se pueden tocar; `with check` decide cómo pueden quedar. Sin
 -- `with check`, un docente puede mover una nota a una inscripción de otro curso: la fila de
@@ -65,17 +65,38 @@ select is(
 -- en invariantes, para que las migraciones que vengan no puedan olvidarlo en silencio.
 -- ---------------------------------------------------------------------------
 
+-- `relkind in ('r','v')`: las VISTAS tambien. Se aprendio por las malas — v_nota_efectiva
+-- se creo sin GRANT y quedo correcta e inservible a la vez, porque la comprobacion original
+-- solo miraba tablas.
 select is(
   (
     select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relkind = 'r'
+      and c.relkind in ('r', 'v')
       and not has_table_privilege('authenticated', c.oid, 'SELECT')
   ),
   '',
-  'Toda tabla concede SELECT a authenticated (si no, la RLS ni llega a evaluarse)'
+  'Toda tabla y vista concede SELECT a authenticated (si no, la RLS ni llega a evaluarse)'
+);
+
+-- Una vista sin `security_invoker` se ejecuta con los privilegios de su dueno y salta por
+-- encima de la RLS de las tablas que consulta. Es una puerta trasera con aspecto inocente:
+-- el dia que alguien anada `v_boletin` sin esta opcion, expone las notas de todo el
+-- instituto sin que ninguna politica se entere.
+select is(
+  (
+    select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'v'
+      and not coalesce(
+        array_to_string(c.reloptions, ',') like '%security_invoker=true%', false)
+  ),
+  '',
+  'Toda vista se ejecuta con security_invoker: ninguna elude la RLS de sus tablas'
 );
 
 -- Regla 6: nada se borra. El privilegio solo existe donde el modelo contempla el borrado, y
@@ -102,7 +123,7 @@ select is(
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relkind = 'r'
+      and c.relkind in ('r', 'v')
       and (
         has_table_privilege('anon', c.oid, 'SELECT')
         or has_table_privilege('anon', c.oid, 'INSERT')
@@ -111,7 +132,7 @@ select is(
       )
   ),
   '',
-  'anon no tiene ningún privilegio sobre las tablas del portal'
+  'anon no tiene ningún privilegio sobre las tablas ni vistas del portal'
 );
 
 select * from finish();
