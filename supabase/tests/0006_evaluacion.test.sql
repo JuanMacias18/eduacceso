@@ -122,10 +122,16 @@ select is(
 -- Es la comprobación de que los pesos cierran.
 -- ---------------------------------------------------------------------------
 
+-- Acotado al curso de esta prueba. Sin el join contra componentes_evaluacion, esto
+-- recogeria tambien los items de la semilla y la definitiva saldria de otro planeta: una
+-- prueba que asume la base vacia se rompe el dia que existe supabase/seed.sql.
 insert into notas (item_id, inscripcion_id, valor, registrada_por)
-select id, '25000000-0000-0000-0000-000000000001', 5.0, 'b5b5b5b5-0000-0000-0000-000000000001'
-from items_calificables
-where id <> '45000000-0000-0000-0000-000000000001';
+select i.id, '25000000-0000-0000-0000-000000000001', 5.0,
+       'b5b5b5b5-0000-0000-0000-000000000001'
+from items_calificables i
+join componentes_evaluacion c on c.id = i.componente_id
+where c.curso_id = '15000000-0000-0000-0000-000000000001'
+  and i.id <> '45000000-0000-0000-0000-000000000001';
 
 select is(
   public.calcular_definitiva('25000000-0000-0000-0000-000000000001'),

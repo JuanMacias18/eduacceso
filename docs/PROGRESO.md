@@ -8,7 +8,7 @@
 | Encargo | Estado | Fecha | Notas |
 |---|---|---|---|
 | 01 · Cimientos | **cerrado** | 2026-08-15 | Todos los criterios cumplidos. Repo público, `main` protegida con el check `verify`, secret scanning y Dependabot activos |
-| 02 · Esquema y RLS | en curso | 2026-08-15 | 3 de 9 rebanadas: esquema, arnés pgTAP e índices. Siguiente: políticas RLS |
+| 02 · Esquema y RLS | en curso | 2026-08-15 | 8 de 9 rebanadas. Falta cerrar la suite de pruebas del encargo |
 | 03 · Esqueleto vertical | pendiente | — | |
 
 ## Bitácora
@@ -190,6 +190,39 @@ migrar un solo dato.
 
 > **Revisar si** aparece una segunda sede con coordinación propia, o si se contrata
 > coordinación por región. Ese es el momento de introducir el alcance, no antes.
+
+**`0005` evaluación, `0006` plantillas, `0007` corrección y la semilla.** 69 pruebas pgTAP en
+ocho archivos. Lo verificado por mutación: aplanar los pesos devuelve 3.5 en vez de 1.05 y
+una definitiva de 20.0 sobre una escala que llega a 5.0; desactivar la RLS de `matriculas`
+pone en rojo la prueba de aislamiento; quitar el disparador de auditoría tumba 6 de 9.
+
+**`0007` corrige a `0006` con una migración nueva, no editándola.** `0006` ya estaba
+commiteada y en `origin`, así que aplica la condición de parada 3. El defecto:
+`curso_10_aplicar_plantilla` estaba en `before insert or update`, y en un INSERT el
+disparador corre antes de que exista la fila del curso — copiar la plantilla violaba la clave
+foránea con un error que no explicaba nada. Ahora solo dispara en UPDATE, que además es el
+flujo real: los cursos nacen en borrador y coordinación los abre.
+
+**Dos defectos propios que destapó la semilla, ambos en mis pruebas:**
+
+1. Una prueba esperaba que un `UPDATE` bloqueado por RLS lanzara error. **No lanza: afecta
+   cero filas.** Solo el `with check` lanza 42501. Habría pasado por el motivo equivocado si
+   el `using` hubiera estado mal escrito. Ahora se comprueban las dos mecánicas por separado,
+   y conviene recordarlo al revisar cualquier prueba de RLS.
+2. Un `insert ... select ... from items_calificables` sin acotar. Funcionaba con la base
+   vacía y se rompió en cuanto existió `seed.sql`, porque recogía también los ítems
+   sembrados. **Una prueba que asume la base vacía es una prueba con fecha de caducidad.**
+
+**Sobre la semilla.** Datos íntegramente ficticios (regla 19): 2 programas, 5 periodos, 10
+materias, 1 cohorte, 8 estudiantes, 2 docentes, 1 coordinador, 5 cursos secuenciales con el
+primero abierto, contenido con identificadores de YouTube marcadores y las notas de la Unidad
+1 publicadas. Dos estudiantes son menores y llevan su autorización de acudiente, como exige
+la Ley 1581.
+
+Las notas sembradas son **deterministas, no aleatorias**: una semilla que cambia en cada
+reset hace imposible razonar sobre lo que se ve en pantalla. La contraseña de todas las
+cuentas es `eduacceso-local`, credencial de desarrollo para una base que se recrea con
+`db reset`.
 
 **Notas técnicas para la siguiente sesión.**
 
