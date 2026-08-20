@@ -7,6 +7,9 @@ Antes de tocar código: [`CLAUDE.md`](CLAUDE.md) tiene las reglas no negociables
 [`docs/modelo-datos.md`](docs/modelo-datos.md) el esquema y
 [`docs/PROGRESO.md`](docs/PROGRESO.md) el estado actual.
 
+Qué falta para que esto sea utilizable de verdad, y qué hay que auditar antes de que entre un
+dato real: [`docs/RUTA-A-PRODUCCION.md`](docs/RUTA-A-PRODUCCION.md).
+
 ## Requisitos
 
 | Herramienta | Versión | Para qué |

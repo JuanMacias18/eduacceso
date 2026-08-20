@@ -2,6 +2,10 @@
 
 > El agente lee este archivo al iniciar cada sesión y lo actualiza al cerrar cada tarea.
 > Formato: estado, fecha, y lo que la siguiente sesión necesita saber.
+>
+> Para lo que falta hasta producción y lo que hay que auditar antes de que entre un dato
+> real, ver [`RUTA-A-PRODUCCION.md`](RUTA-A-PRODUCCION.md). Lo que hay que pedirle al cliente
+> está en [`peticion-a-coordinacion.md`](peticion-a-coordinacion.md).
 
 ## Estado general
 

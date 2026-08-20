@@ -13,7 +13,8 @@
  * Requiere la base local levantada (`supabase start`).
  */
 import { spawnSync } from 'node:child_process'
-import { readdirSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { connect } from 'node:net'
 import { join } from 'node:path'
 import { exit } from 'node:process'
 
@@ -45,6 +46,50 @@ if (migraciones.length > 0 && pruebas.length === 0) {
 
 if (pruebas.length === 0) {
   console.error('\n  No hay pruebas que ejecutar y tampoco migraciones. Algo va mal.\n')
+  exit(1)
+}
+
+/** Puerto de la base declarado en supabase/config.toml. */
+function puertoDeLaBase() {
+  try {
+    const config = readFileSync(join(raiz, 'supabase', 'config.toml'), 'utf8')
+    const seccion = config.slice(config.indexOf('[db]'))
+    const encontrado = /^port\s*=\s*(\d+)/m.exec(seccion)
+    return encontrado ? Number(encontrado[1]) : 54322
+  } catch {
+    return 54322
+  }
+}
+
+/** ¿Acepta conexiones la base local? */
+function baseAlcanzable(puerto) {
+  return new Promise((resolver) => {
+    const socket = connect({ host: '127.0.0.1', port: puerto })
+    const cerrar = (alcanzable) => {
+      socket.destroy()
+      resolver(alcanzable)
+    }
+    socket.setTimeout(3000)
+    socket.once('connect', () => cerrar(true))
+    socket.once('timeout', () => cerrar(false))
+    socket.once('error', () => cerrar(false))
+  })
+}
+
+// Se comprueba ANTES de lanzar las pruebas para no confundir dos cosas muy distintas: que el
+// aislamiento esté roto, y que la base no esté levantada. El mensaje de "revisa tus
+// políticas" cuando lo que pasa es que Docker está apagado cuesta media tarde a quien lo lee.
+const puerto = puertoDeLaBase()
+if (!(await baseAlcanzable(puerto))) {
+  console.error(`
+  La base local no responde en 127.0.0.1:${puerto}.
+
+  Esto NO dice nada sobre las politicas RLS: las pruebas no llegaron a ejecutarse.
+  Levanta el entorno y vuelve a intentarlo:
+
+    1. Arranca Docker Desktop.
+    2. supabase start
+`)
   exit(1)
 }
 
